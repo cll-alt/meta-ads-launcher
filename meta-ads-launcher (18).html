@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Meta Bulk Ad Launcher</title>
+<style>
+:root {
+  --blue: #1877F2;
+  --blue-dark: #1260CC;
+  --green: #16A34A;
+  --red: #DC2626;
+  --bg: #F0F2F5;
+  --surface: #fff;
+  --border: #E4E6EA;
+  --border2: #D1D5DB;
+  --text: #1C1E21;
+  --muted: #65676B;
+  --hint: #9DA3AC;
+  --accent: #E7F0FF;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── Header ── */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+.topbar-logo { display: flex; align-items: center; gap: 8px; }
+.logo-mark { width: 32px; height: 32px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+.topbar-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.topbar-sub { font-size: 12px; color: var(--muted); }
+.topbar-sep { width: 1px; height: 24px; background: var(--border); }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* ── Layout ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+/* ── Shared Settings ── */
+.shared-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; }
+.shared-bar-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.shared-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+@media(max-width:900px){ .shared-grid { grid-template-columns: 1fr 1fr; } }
+@media(max-width:540px){ .shared-grid { grid-template-columns: 1fr; } }
+
+/* ── Fields ── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.field input, .field select, .field textarea {
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; color: var(--text); font-family: var(--sans);
+  outline: none; transition: border-color .15s, background .15s; width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); background: #fff; }
+.field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2365676B' d='M5 7L0 2h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; background-color: var(--bg); cursor: pointer; }
+.field textarea { resize: vertical; min-height: 60px; }
+.field .hint { font-size: 10px; color: var(--hint); }
+
+/* ── Ads Table ── */
+.ads-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ads-section-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.ads-count { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+
+.ad-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: border-color .15s; }
+.ad-card:focus-within { border-color: #93B4F7; }
+.ad-card.has-error { border-color: #FECACA; }
+
+.ad-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #FAFBFC; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+.ad-num { font-family: var(--mono); font-size: 11px; font-weight: 600; color: #fff; background: var(--blue); border-radius: 5px; padding: 2px 7px; min-width: 28px; text-align: center; }
+.ad-card-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-card-preview { font-size: 11px; color: var(--muted); flex: 2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-card-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.status-paused { background: #FEF9EC; color: #92400E; border: 1px solid #FDE68A; }
+.status-active { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+.ad-card-chevron { color: var(--muted); font-size: 12px; transition: transform .2s; }
+.ad-card-chevron.open { transform: rotate(180deg); }
+.ad-card-del { background: none; border: none; color: var(--hint); cursor: pointer; font-size: 14px; padding: 2px 4px; line-height: 1; border-radius: 4px; }
+.ad-card-del:hover { color: var(--red); background: #FEF2F2; }
+
+.ad-card-body { padding: 16px; display: none; }
+.ad-card-body.open { display: block; }
+
+.ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.ad-grid .span2 { grid-column: 1 / -1; }
+@media(max-width:600px){ .ad-grid { grid-template-columns: 1fr; } .ad-grid .span2 { grid-column: 1; } }
+
+/* ── Format Pills ── */
+.fmt-pills { display: flex; gap: 6px; margin-bottom: 14px; }
+.fmt-pill { padding: 6px 14px; border-radius: 6px; border: 1.5px solid var(--border2); background: #fff; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--sans); transition: all .15s; }
+.fmt-pill.active { border-color: var(--blue); background: var(--accent); color: var(--blue); }
+
+/* ── Placement Overrides ── */
+.overrides-toggle { display: flex; align-items: center; gap: 8px; padding: 10px 0 6px; cursor: pointer; user-select: none; border-top: 1px solid var(--border); margin-top: 8px; }
+.overrides-toggle-label { font-size: 12px; font-weight: 600; color: var(--blue); }
+.overrides-toggle-hint { font-size: 11px; color: var(--muted); }
+.overrides-toggle-caret { font-size: 11px; color: var(--blue); margin-left: auto; transition: transform .2s; }
+.overrides-toggle-caret.open { transform: rotate(180deg); }
+
+.overrides-panel { display: none; background: #F8FAFF; border: 1.5px solid #BFDBFE; border-radius: 10px; padding: 14px; margin-top: 8px; }
+.overrides-panel.open { display: block; }
+.overrides-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+.override-row { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 10px; align-items: end; margin-bottom: 10px; }
+@media(max-width:600px){ .override-row { grid-template-columns: 1fr; } }
+.placement-label-cell { display: flex; align-items: center; gap: 8px; padding-bottom: 2px; }
+.placement-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.placement-lbl { font-size: 12px; font-weight: 600; color: var(--text); }
+.placement-ratio { font-size: 10px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--sans); transition: all .15s; white-space: nowrap; }
+.btn-blue { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: var(--blue-dark); }
+.btn-green { background: var(--green); color: #fff; font-size: 14px; padding: 11px 28px; }
+.btn-green:hover { background: #15803D; }
+.btn-outline { background: #fff; border: 1.5px solid var(--border2); color: var(--muted); }
+.btn-outline:hover { border-color: #9DA3AC; color: var(--text); }
+.btn-ghost-red { background: none; border: 1.5px solid #FECACA; color: var(--red); }
+.btn-ghost-red:hover { background: #FEF2F2; }
+.btn-add-ad { width: 100%; background: #fff; border: 2px dashed var(--border2); border-radius: 12px; padding: 14px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: var(--sans); transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; }
+.btn-add-ad:hover { border-color: var(--blue); color: var(--blue); background: var(--accent); }
+
+/* ── Alert ── */
+.alert-error { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--red); margin-bottom: 14px; }
+.alert-info { background: var(--accent); border: 1px solid #BFDBFE; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #1D4ED8; line-height: 1.7; margin-bottom: 14px; }
+
+/* ── Export bar ── */
+.export-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+.export-bar-info { flex: 1; }
+.export-bar-label { font-size: 14px; font-weight: 700; color: var(--text); }
+.export-bar-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ── Inline copy button ── */
+.copy-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.copy-row-label { font-size: 11px; color: var(--muted); }
+
+/* ── Tooltip-style duplicate btn ── */
+.dup-btn { background: none; border: 1.5px solid var(--border); border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: var(--sans); }
+.dup-btn:hover { border-color: var(--blue); color: var(--blue); }
+/* ── Launch states ── */
+.log-pending { color: var(--hint); }
+.log-running { color: var(--blue); font-weight: 600; }
+.log-done    { color: var(--green); font-weight: 600; }
+.log-error   { color: var(--red); font-weight: 600; }
+.result-id-row { display:flex; justify-content:space-between; align-items:center; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; }
+.result-id-label { color: var(--muted); font-weight:600; }
+.result-id-val { font-family:var(--mono); color:var(--green); font-weight:600; }
+.btn-green:disabled { opacity:0.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-mark">🎯</div>
+    <div>
+      <div class="topbar-title">Meta Bulk Ad Creator</div>
+      <div class="topbar-sub">Build 10+ ads, launch directly into your account</div>
+    </div>
+  </div>
+  <div class="topbar-sep"></div>
+  <div style="font-size:12px;color:var(--muted)">Paste IDs → Build Ads → Export CSV → Import into Ads Manager</div>
+  <div class="topbar-actions">
+    <button class="btn btn-outline" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-green" id="topLaunchBtn" onclick="launchAll()">🚀 Launch All Ads</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div id="errorBox" class="alert-error" style="display:none"></div>
+
+  <!-- ── Shared Settings ── -->
+  <div class="shared-bar">
+    <div class="shared-bar-title">Shared Settings — applied to all ads</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div class="field">
+        <label>Access Token *</label>
+        <input type="password" id="accessToken" placeholder="EAAxxxxxxx..."/>
+        <div class="hint">Business Manager → System Users → Generate Token. Needs: ads_management, ads_read, pages_read_engagement</div>
+      </div>
+      <div class="field">
+        <label>Ad Account ID *</label>
+        <input type="text" id="accountId" placeholder="123456789 (without act_ prefix)"/>
+        <div class="hint">Ads Manager → Account Settings</div>
+      </div>
+    </div>
+    <div class="shared-grid">
+      <div class="field">
+        <label>Campaign ID *</label>
+        <input type="text" id="campaignId" placeholder="120210001234560386"/>
+        <div class="hint">Ads Manager → Campaigns → Info panel</div>
+      </div>
+      <div class="field">
+        <label>Campaign Name <span style="font-weight:400">(label only)</span></label>
+        <input type="text" id="campName" placeholder="Summer Sale 2025"/>
+      </div>
+      <div class="field">
+        <label>Ad Set ID *</label>
+        <input type="text" id="adsetId" placeholder="120210001234570386"/>
+        <div class="hint">Ads Manager → Ad Sets → Info panel</div>
+      </div>
+      <div class="field">
+        <label>Ad Set Name <span style="font-weight:400">(label only)</span></label>
+        <input type="text" id="adsetName" placeholder="US 18-35 Retargeting"/>
+      </div>
+      <div class="field">
+        <label>Facebook Page ID *</label>
+        <input type="text" id="pageId" placeholder="479222232151500"/>
+        <div class="hint">Business Manager → Pages → About</div>
+      </div>
+      <div class="field">
+        <label>Instagram Actor ID</label>
+        <input type="text" id="igActorId" placeholder="Optional"/>
+      </div>
+      <div class="field">
+        <label>Pixel ID</label>
+        <input type="text" id="pixelId" placeholder="1380757625856087"/>
+      </div>
+      <div class="field">
+        <label>Conversion Event</label>
+        <select id="pixelEvent">
+          <option value="PURCHASE">Purchase</option>
+          <option value="LEAD">Lead</option>
+          <option value="COMPLETE_REGISTRATION">Complete Registration</option>
+          <option value="ADD_TO_CART">Add to Cart</option>
+          <option value="INITIATE_CHECKOUT">Initiate Checkout</option>
+          <option value="VIEW_CONTENT">View Content</option>
+        </select>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ── Ads ── -->
+  <div class="ads-section-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="ads-section-title">Ads</span>
+      <span class="ads-count" id="adsCount">1 ad</span>
+    </div>
+    <button class="btn btn-outline" onclick="duplicateLastAd()" style="font-size:12px;padding:6px 14px">⧉ Duplicate Last</button>
+  </div>
+
+  <div id="adsList"></div>
+
+  <button class="btn-add-ad" onclick="addAd()">＋ Add Another Ad</button>
+
+  <!-- ── Launch ── -->
+  <div class="export-bar" id="launchBar">
+    <div class="export-bar-info">
+      <div class="export-bar-label" id="launchBarLabel">Ready to launch</div>
+      <div class="export-bar-sub" id="launchBarSub">Fill in your token, IDs and ads above, then hit Launch.</div>
+    </div>
+    <button class="btn btn-outline" onclick="resetAll()">↺ Start Over</button>
+    <button class="btn btn-green" id="launchBtn" onclick="launchAll()">🚀 Launch All Ads</button>
+  </div>
+
+  <!-- ── Results ── -->
+  <div id="resultsPanel" style="display:none;margin-top:16px">
+    <div class="shared-bar">
+      <div class="shared-bar-title" style="margin-bottom:12px">Launch Results</div>
+      <div id="resultsLog" style="font-size:13px;line-height:2;font-family:var(--mono)"></div>
+      <div id="resultsSummary" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div id="resultsSummaryText" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px"></div>
+        <div id="resultsIds" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://adsmanager.facebook.com/adsmanager/manage/ads" target="_blank" class="btn btn-blue" style="text-decoration:none">Open Ads Manager →</a>
+          <button class="btn btn-outline" onclick="resetAll()">Launch Another Batch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+var ads = [];
+var adCounter = 0;
+
+var STORY_PLACEMENTS = [
+  { id: 'fb_stories',  label: 'Facebook Stories', color: '#1877F2' },
+  { id: 'ig_stories',  label: 'Instagram Stories', color: '#E1306C' },
+  { id: 'ig_reels',    label: 'Instagram Reels',   color: '#E1306C' },
+  { id: 'fb_reels',    label: 'Facebook Reels',    color: '#1877F2' },
+  { id: 'msg_stories', label: 'Messenger Stories', color: '#0084FF' },
+];
+
+var v  = function(id) { return (document.getElementById(id)||{}).value || ''; };
+var el = function(id) { return document.getElementById(id); };
+
+function showError(msg) {
+  el('errorBox').innerHTML = '⚠ ' + msg;
+  el('errorBox').style.display = 'block';
+  setTimeout(function(){ el('errorBox').style.display = 'none'; }, 6000);
+}
+
+// ── Ad management ─────────────────────────────────────────────────────────────
+function makeAd(base) {
+  adCounter++;
+  return Object.assign({
+    id: adCounter,
+    name: '',
+    status: 'PAUSED',
+    format: 'SINGLE_IMAGE',
+    body: '',
+    headline: '',
+    desc: '',
+    destType: 'WEB',
+    destUrl: '',
+    displayUrl: '',
+    urlParams: '',
+    cta: 'LEARN_MORE',
+    appStoreUrl: '',
+    deepLinkUrl: '',
+    applinkTreatment: 'deeplink_with_web_fallback',
+    imageHash: '',
+    imageUrl: '',
+    videoId: '',
+    videoThumb: '',
+    // Placement overrides (9:16)
+    overrides: {
+      fb_stories:  { enabled: false, imageHash: '', imageUrl: '', videoId: '' },
+      ig_stories:  { enabled: false, imageHash: '', imageUrl: '', videoId: '' },
+      ig_reels:    { enabled: false, imageHash: '', imageUrl: '', videoId: '' },
+      fb_reels:    { enabled: false, imageHash: '', imageUrl: '', videoId: '' },
+      msg_stories: { enabled: false, imageHash: '', imageUrl: '', videoId: '' },
+    }
+  }, base || {});
+}
+
+function addAd(base) {
+  var ad = makeAd(base);
+  ads.push(ad);
+  renderAds();
+  // Auto-open the new ad
+  setTimeout(function(){ toggleCard(ad.id, true); }, 50);
+}
+
+function duplicateLastAd() {
+  if (!ads.length) { addAd(); return; }
+  var last = ads[ads.length - 1];
+  var copy = makeAd(JSON.parse(JSON.stringify(last)));
+  copy.name = last.name ? last.name + ' (copy)' : '';
+  ads.push(copy);
+  renderAds();
+  setTimeout(function(){ toggleCard(copy.id, true); }, 50);
+}
+
+function removeAd(id) {
+  if (ads.length === 1) { showError("You need at least one ad."); return; }
+  ads = ads.filter(function(a){ return a.id !== id; });
+  renderAds();
+}
+
+function getAd(id) {
+  return ads.find(function(a){ return a.id === id; });
+}
+
+function updateAd(id, key, val) {
+  var ad = getAd(id);
+  if (ad) { ad[key] = val; refreshHeader(id); }
+}
+
+function updateOverride(adId, placementId, key, val) {
+  var ad = getAd(adId);
+  if (ad && ad.overrides[placementId]) {
+    ad.overrides[placementId][key] = val;
+  }
+}
+
+function toggleOverride(adId, placementId, enabled) {
+  var ad = getAd(adId);
+  if (ad && ad.overrides[placementId]) {
+    ad.overrides[placementId].enabled = enabled;
+    var panel = el('override-fields-' + adId + '-' + placementId);
+    if (panel) panel.style.display = enabled ? 'grid' : 'none';
+  }
+}
+
+function setFormat(adId, fmt) {
+  var ad = getAd(adId);
+  if (!ad) return;
+  ad.format = fmt;
+  // Update pills
+  var pills = document.querySelectorAll('.fmt-pills-' + adId + ' .fmt-pill');
+  pills.forEach(function(p){ p.classList.toggle('active', p.dataset.fmt === fmt); });
+  // Show/hide field sections
+  var imgF = el('img-fields-' + adId);
+  var vidF = el('vid-fields-' + adId);
+  if (imgF) imgF.style.display = (fmt === 'SINGLE_IMAGE') ? 'contents' : 'none';
+  if (vidF) vidF.style.display = (fmt === 'SINGLE_VIDEO') ? 'contents' : 'none';
+  refreshHeader(adId);
+}
+
+function toggleCard(id, forceOpen) {
+  var body = el('card-body-' + id);
+  var caret = el('card-caret-' + id);
+  if (!body) return;
+  var isOpen = body.classList.contains('open');
+  var shouldOpen = (forceOpen !== undefined) ? forceOpen : !isOpen;
+  body.classList.toggle('open', shouldOpen);
+  if (caret) caret.classList.toggle('open', shouldOpen);
+}
+
+function toggleOverridesPanel(adId) {
+  var panel = el('overrides-panel-' + adId);
+  var caret = el('overrides-caret-' + adId);
+  if (!panel) return;
+  var isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  if (caret) caret.classList.toggle('open', !isOpen);
+}
+
+function refreshHeader(id) {
+  var ad = getAd(id);
+  if (!ad) return;
+  var nameEl = el('card-name-' + id);
+  var previewEl = el('card-preview-' + id);
+  var statusEl = el('card-status-' + id);
+  if (nameEl) nameEl.textContent = ad.name || 'Ad ' + id;
+  if (previewEl) previewEl.textContent = [ad.format.replace(/_/g,' '), ad.headline || ad.body.slice(0,50) || '—'].filter(Boolean).join(' · ');
+  if (statusEl) {
+    statusEl.textContent = ad.status;
+    statusEl.className = 'ad-card-status ' + (ad.status === 'ACTIVE' ? 'status-active' : 'status-paused');
+  }
+  var countEl = el('adsCount');
+  if (countEl) countEl.textContent = ads.length + ' ad' + (ads.length !== 1 ? 's' : '');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAds() {
+  var container = el('adsList');
+  container.innerHTML = ads.map(function(ad, idx) {
+    return renderAdCard(ad, idx);
+  }).join('');
+
+  // Re-apply format visibility (since innerHTML blows away state)
+  ads.forEach(function(ad) {
+    var imgF = el('img-fields-' + ad.id);
+    var vidF = el('vid-fields-' + ad.id);
+    if (imgF) imgF.style.display = (ad.format === 'SINGLE_IMAGE') ? 'contents' : 'none';
+    if (vidF) vidF.style.display = (ad.format === 'SINGLE_VIDEO') ? 'contents' : 'none';
+    var webF=el('dest-web-'+ad.id),appF=el('dest-app-'+ad.id),webappF=el('dest-webapp-'+ad.id);
+    if(webF)    webF.style.display    = (ad.destType==='WEB')?'contents':'none';
+    if(appF)    appF.style.display    = (ad.destType==='APP')?'contents':'none';
+    if(webappF) webappF.style.display = (ad.destType==='WEB_APP')?'contents':'none';
+    // Re-apply override fields
+    STORY_PLACEMENTS.forEach(function(p) {
+      var panel = el('override-fields-' + ad.id + '-' + p.id);
+      if (panel) panel.style.display = ad.overrides[p.id].enabled ? 'grid' : 'none';
+    });
+  });
+
+  var countEl = el('adsCount');
+  if (countEl) countEl.textContent = ads.length + ' ad' + (ads.length !== 1 ? 's' : '');
+}
+
+function renderAdCard(ad, idx) {
+  var fmtPills = ['SINGLE_IMAGE','SINGLE_VIDEO'].map(function(f) {
+    var labels = { SINGLE_IMAGE: '🖼 Image (1:1)', SINGLE_VIDEO: '🎬 Video (1:1)' };
+    return '<button class="fmt-pill' + (ad.format === f ? ' active' : '') + '" data-fmt="' + f + '" onclick="setFormat(' + ad.id + ',\'' + f + '\')">' + labels[f] + '</button>';
+  }).join('');
+
+  var overrideRows = STORY_PLACEMENTS.map(function(p) {
+    var ov = ad.overrides[p.id];
+    var isVideo = ad.format === 'SINGLE_VIDEO';
+    return '<div class="override-row">' +
+      '<div class="placement-label-cell">' +
+        '<input type="checkbox" ' + (ov.enabled ? 'checked' : '') + ' onchange="toggleOverride(' + ad.id + ',\'' + p.id + '\',this.checked)" style="accent-color:' + p.color + ';width:auto;cursor:pointer"/>' +
+        '<span class="placement-dot" style="background:' + p.color + '"></span>' +
+        '<span class="placement-lbl">' + p.label + '</span>' +
+        '<span class="placement-ratio">9:16</span>' +
+      '</div>' +
+      '<div id="override-fields-' + ad.id + '-' + p.id + '" style="display:' + (ov.enabled ? 'grid' : 'none') + ';grid-column:2/4;grid-template-columns:1fr 1fr;gap:10px">' +
+        (isVideo ?
+          '<div class="field"><label>Video ID (9:16)</label><input type="text" value="' + (ov.videoId||'') + '" placeholder="Meta Video Library ID" oninput="updateOverride(' + ad.id + ',\'' + p.id + '\',\'videoId\',this.value)"/></div>' +
+          '<div class="field"><label>Thumbnail Hash</label><input type="text" value="' + (ov.imageHash||'') + '" placeholder="Optional" oninput="updateOverride(' + ad.id + ',\'' + p.id + '\',\'imageHash\',this.value)"/></div>'
+        :
+          '<div class="field"><label>Image Hash (9:16)</label><input type="text" value="' + (ov.imageHash||'') + '" placeholder="From Media Library" oninput="updateOverride(' + ad.id + ',\'' + p.id + '\',\'imageHash\',this.value)"/></div>' +
+          '<div class="field"><label>Image URL (9:16)</label><input type="url" value="' + (ov.imageUrl||'') + '" placeholder="https://..." oninput="updateOverride(' + ad.id + ',\'' + p.id + '\',\'imageUrl\',this.value)"/></div>'
+        ) +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="ad-card" id="card-' + ad.id + '">' +
+    '<div class="ad-card-header" onclick="toggleCard(' + ad.id + ')">' +
+      '<span class="ad-num">' + (idx+1) + '</span>' +
+      '<span class="ad-card-name" id="card-name-' + ad.id + '">' + (ad.name || 'Ad ' + ad.id) + '</span>' +
+      '<span class="ad-card-preview" id="card-preview-' + ad.id + '">' + [ad.format.replace(/_/g,' '), ad.headline || ad.body.slice(0,50) || '—'].filter(Boolean).join(' · ') + '</span>' +
+      '<span class="ad-card-status ' + (ad.status==='ACTIVE'?'status-active':'status-paused') + '" id="card-status-' + ad.id + '">' + ad.status + '</span>' +
+      '<span class="ad-card-chevron" id="card-caret-' + ad.id + '">▼</span>' +
+      '<button class="ad-card-del" onclick="event.stopPropagation();removeAd(' + ad.id + ')" title="Delete">✕</button>' +
+    '</div>' +
+
+    '<div class="ad-card-body" id="card-body-' + ad.id + '">' +
+
+      // Identity row
+      '<div class="ad-grid" style="margin-bottom:14px">' +
+        '<div class="field">' +
+          '<label>Ad Name</label>' +
+          '<input type="text" value="' + ad.name + '" placeholder="Leave blank to auto-generate" oninput="updateAd(' + ad.id + ',\'name\',this.value)"/>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Ad Status</label>' +
+          '<select onchange="updateAd(' + ad.id + ',\'status\',this.value)">' +
+            '<option value="PAUSED"' + (ad.status==='PAUSED'?' selected':'') + '>Paused</option>' +
+            '<option value="ACTIVE"' + (ad.status==='ACTIVE'?' selected':'') + '>Active</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+
+      // Format pills
+      '<div class="fmt-pills fmt-pills-' + ad.id + '">' + fmtPills + '</div>' +
+
+      // Main creative fields
+      '<div class="ad-grid">' +
+        '<div class="field span2">' +
+          '<label>Primary Text *</label>' +
+          '<textarea placeholder="Your ad copy — 125 chars recommended" oninput="updateAd(' + ad.id + ',\'body\',this.value)">' + ad.body + '</textarea>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Headline</label>' +
+          '<input type="text" value="' + ad.headline + '" placeholder="Up to 40 chars" oninput="updateAd(' + ad.id + ',\'headline\',this.value)"/>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label>Description</label>' +
+          '<input type="text" value="' + ad.desc + '" placeholder="Up to 30 chars" oninput="updateAd(' + ad.id + ',\'desc\',this.value)"/>' +
+        '</div>' +
+        // Destination type pills
+        '<div class="field span2" style="margin-bottom:4px">' +
+          '<label>Destination Type *</label>' +
+          '<div style="display:flex;gap:6px;margin-top:4px">' +
+            ['WEB','APP','WEB_APP'].map(function(t) {
+              var labels = { WEB: '🌐 Web', APP: '📱 App', WEB_APP: '🌐📱 Web + App' };
+              return '<button id="dest-pill-' + ad.id + '-' + t + '" class="fmt-pill' + (ad.destType===t?' active':'') + '" onclick="setDestType(' + ad.id + ',\'' + t + '\')">' + labels[t] + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+
+        // WEB fields
+        '<div id="dest-web-' + ad.id + '" style="display:' + (ad.destType==='WEB'?'contents':'none') + '">' +
+          '<div class="field span2"><label>Website URL *</label><input type="url" value="' + ad.destUrl + '" placeholder="https://yoursite.com/page" oninput="updateAd(' + ad.id + ',\'destUrl\',this.value)"/></div>' +
+          '<div class="field"><label>Display URL</label><input type="text" value="' + ad.displayUrl + '" placeholder="yoursite.com" oninput="updateAd(' + ad.id + ',\'displayUrl\',this.value)"/></div>' +
+        '</div>' +
+
+        // APP fields
+        '<div id="dest-app-' + ad.id + '" style="display:' + (ad.destType==='APP'?'contents':'none') + '">' +
+          '<div class="field span2"><label>App Store URL *</label><input type="url" value="' + ad.appStoreUrl + '" placeholder="https://apps.apple.com/... or play.google.com/..." oninput="updateAd(' + ad.id + ',\'appStoreUrl\',this.value)"/></div>' +
+          '<div class="field span2"><label>Deep Link URL</label><input type="text" value="' + ad.deepLinkUrl + '" placeholder="myapp://page/123 (optional)" oninput="updateAd(' + ad.id + ',\'deepLinkUrl\',this.value)"/></div>' +
+        '</div>' +
+
+        // WEB+APP fields
+        '<div id="dest-webapp-' + ad.id + '" style="display:' + (ad.destType==='WEB_APP'?'contents':'none') + '">' +
+          '<div class="field span2"><label>Website URL *</label><input type="url" value="' + ad.destUrl + '" placeholder="https://yoursite.com/page" oninput="updateAd(' + ad.id + ',\'destUrl\',this.value)"/></div>' +
+          '<div class="field span2"><label>App Store URL *</label><input type="url" value="' + ad.appStoreUrl + '" placeholder="https://apps.apple.com/..." oninput="updateAd(' + ad.id + ',\'appStoreUrl\',this.value)"/></div>' +
+          '<div class="field"><label>Deep Link URL</label><input type="text" value="' + ad.deepLinkUrl + '" placeholder="myapp://page/123" oninput="updateAd(' + ad.id + ',\'deepLinkUrl\',this.value)"/></div>' +
+          '<div class="field"><label>Applink Treatment</label><select onchange="updateAd(' + ad.id + ',\'applinkTreatment\',this.value)">' +
+            '<option value="deeplink_with_web_fallback"'          + (ad.applinkTreatment==='deeplink_with_web_fallback'?' selected':'')          + '>Deep link + web fallback</option>' +
+            '<option value="deeplink_with_appstore_fallback"'     + (ad.applinkTreatment==='deeplink_with_appstore_fallback'?' selected':'')     + '>Deep link + App Store fallback</option>' +
+            '<option value="web_only"'                            + (ad.applinkTreatment==='web_only'?' selected':'')                            + '>Web only</option>' +
+          '</select></div>' +
+        '</div>' +
+
+        // CTA + URL params (shared)
+        '<div class="field">' +
+          '<label>Call to Action</label>' +
+          '<select onchange="updateAd(' + ad.id + ',\'cta\',this.value)">' +
+            ['LEARN_MORE','SHOP_NOW','SIGN_UP','GET_OFFER','BOOK_NOW','CONTACT_US','DOWNLOAD','APPLY_NOW','GET_QUOTE','ORDER_NOW','SUBSCRIBE','NO_BUTTON'].map(function(c){
+              return '<option value="' + c + '"' + (ad.cta===c?' selected':'') + '>' + c.replace(/_/g,' ') + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="field span2"><label>URL Parameters</label><input type="text" value="' + ad.urlParams + '" placeholder="utm_source=facebook&utm_medium=paid" oninput="updateAd(' + ad.id + ',\'urlParams\',this.value)"/></div>' +
+
+
+        // Image fields (1:1)
+        '<div id="img-fields-' + ad.id + '" style="display:contents">' +
+          '<div class="field">' +
+            '<label>Image Hash (1:1) *</label>' +
+            '<input type="text" value="' + ad.imageHash + '" placeholder="From Meta Media Library" oninput="updateAd(' + ad.id + ',\'imageHash\',this.value)"/>' +
+            '<div class="hint">Ads Manager → Media Library → upload → copy hash</div>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Image URL (1:1)</label>' +
+            '<input type="url" value="' + ad.imageUrl + '" placeholder="https://... fallback if no hash" oninput="updateAd(' + ad.id + ',\'imageUrl\',this.value)"/>' +
+          '</div>' +
+        '</div>' +
+
+        // Video fields (1:1)
+        '<div id="vid-fields-' + ad.id + '" style="display:none">' +
+          '<div class="field">' +
+            '<label>Video ID (1:1) *</label>' +
+            '<input type="text" value="' + ad.videoId + '" placeholder="From Meta Video Library" oninput="updateAd(' + ad.id + ',\'videoId\',this.value)"/>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Thumbnail Hash</label>' +
+            '<input type="text" value="' + ad.videoThumb + '" placeholder="Optional" oninput="updateAd(' + ad.id + ',\'videoThumb\',this.value)"/>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Placement overrides
+      '<div class="overrides-toggle" onclick="toggleOverridesPanel(' + ad.id + ')">' +
+        '<span style="font-size:14px">📐</span>' +
+        '<span class="overrides-toggle-label">Placement-Specific Creative (9:16)</span>' +
+        '<span class="overrides-toggle-hint">Override stories &amp; reels with vertical assets</span>' +
+        '<span class="overrides-toggle-caret" id="overrides-caret-' + ad.id + '">▼</span>' +
+      '</div>' +
+      '<div class="overrides-panel" id="overrides-panel-' + ad.id + '">' +
+        '<div class="overrides-title">9:16 Asset Overrides — Stories &amp; Reels</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:12px">Check each placement to supply a separate 9:16 image or video. Unchecked placements use the main 1:1 asset above.</div>' +
+        overrideRows +
+      '</div>' +
+
+    '</div>' + // card-body
+  '</div>'; // ad-card
+}
+
+// ── Meta API ──────────────────────────────────────────────────────────────────
+var TOKEN = '';
+var ACCOUNT_ID = '';
+var launching = false;
+
+function metaPost(path, body) {
+  var sep = path.includes('?') ? '&' : '?';
+  var url = 'https://graph.facebook.com/v19.0' + path + sep + 'access_token=' + encodeURIComponent(TOKEN);
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.error) throw new Error(data.error.message + (data.error.error_subcode ? ' (' + data.error.error_subcode + ')' : '') + (data.error.error_user_msg ? ' — ' + data.error.error_user_msg : ''));
+    return data;
+  });
+}
+
+// ── Launch ────────────────────────────────────────────────────────────────────
+function setLog(adId, state, msg) {
+  var el2 = document.getElementById('log-' + adId);
+  if (!el2) return;
+  var icons = { pending:'⬜', running:'🔄', done:'✅', error:'❌' };
+  el2.className = 'log-' + state;
+  el2.textContent = (icons[state] || '') + ' ' + msg;
+}
+
+function launchAll() {
+  if (launching) return;
+  TOKEN = v('accessToken');
+  var rawAcct = v('accountId');
+  if (!TOKEN)    { showError('Enter your Access Token in Shared Settings.'); return; }
+  if (!rawAcct)  { showError('Enter your Ad Account ID in Shared Settings.'); return; }
+  var campaignId = v('campaignId');
+  var adsetId    = v('adsetId');
+  if (!campaignId || !adsetId) { showError('Enter Campaign ID and Ad Set ID in Shared Settings.'); return; }
+  if (!ads.length) { showError('Add at least one ad before launching.'); return; }
+  var pageId = v('pageId');
+  if (!pageId) { showError('Enter your Facebook Page ID in Shared Settings.'); return; }
+
+  ACCOUNT_ID = rawAcct.startsWith('act_') ? rawAcct : 'act_' + rawAcct;
+  launching = true;
+
+  var launchBtn = document.getElementById('launchBtn');
+  var topBtn    = document.getElementById('topLaunchBtn');
+  if (launchBtn) { launchBtn.disabled = true; launchBtn.textContent = '⏳ Launching...'; }
+  if (topBtn)    { topBtn.disabled = true; topBtn.textContent = '⏳ Launching...'; }
+
+  var panel = document.getElementById('resultsPanel');
+  var log   = document.getElementById('resultsLog');
+  var summ  = document.getElementById('resultsSummary');
+  panel.style.display = 'block';
+  summ.style.display  = 'none';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Build initial log rows
+  log.innerHTML = ads.map(function(ad) {
+    var name = ad.name || ('Ad ' + ad.id);
+    return '<div id="log-' + ad.id + '" class="log-pending">⬜ ' + name + ' — waiting</div>';
+  }).join('');
+
+  var results = [];
+  var errors  = [];
+
+  // Launch sequentially
+  var chain = Promise.resolve();
+  ads.forEach(function(ad) {
+    chain = chain.then(function() {
+      return launchSingleAd(ad, campaignId, adsetId, pageId, results, errors);
+    });
+  });
+
+  chain.then(function() {
+    launching = false;
+    if (launchBtn) { launchBtn.disabled = false; launchBtn.textContent = '🚀 Launch All Ads'; }
+    if (topBtn)    { topBtn.disabled = false; topBtn.textContent = '🚀 Launch All Ads'; }
+    showResults(results, errors);
+  });
+}
+
+function setDestType(adId, destType) {
+  var ad = getAd(adId);
+  if (!ad) return;
+  ad.destType = destType;
+  ['WEB','APP','WEB_APP'].forEach(function(t) {
+    var btn = el('dest-pill-' + adId + '-' + t);
+    if (btn) btn.classList.toggle('active', t === destType);
+  });
+  var webF    = el('dest-web-'    + adId);
+  var appF    = el('dest-app-'    + adId);
+  var webappF = el('dest-webapp-' + adId);
+  if (webF)    webF.style.display    = (destType === 'WEB')     ? 'contents' : 'none';
+  if (appF)    appF.style.display    = (destType === 'APP')     ? 'contents' : 'none';
+  if (webappF) webappF.style.display = (destType === 'WEB_APP') ? 'contents' : 'none';
+}
+
+function launchSingleAd(ad, campaignId, adsetId, pageId, results, errors) {
+  var adName   = ad.name || (v('campName') || campaignId) + ' - Ad ' + ad.id;
+  var igActor  = v('igActorId');
+  var pixelId  = v('pixelId');
+  var pixelEvt = v('pixelEvent');
+
+  setLog(ad.id, 'running', adName + ' — creating creative...');
+
+  // Resolve destination
+  var destLink = (ad.destType === 'APP') ? (ad.appStoreUrl || '') : (ad.destUrl || '');
+
+  // Build CTA value
+  var ctaValue = { link: destLink };
+  if ((ad.destType === 'APP' || ad.destType === 'WEB_APP') && ad.appStoreUrl) {
+    ctaValue.app_link = ad.appStoreUrl;
+  }
+  if ((ad.destType === 'APP' || ad.destType === 'WEB_APP') && ad.deepLinkUrl) {
+    ctaValue.app_link_redirect = ad.deepLinkUrl;
+  }
+
+  // Build link_data
+  var linkData = {
+    link:    destLink,
+    message: ad.body,
+    name:    ad.headline,
+    description: ad.desc,
+    call_to_action: { type: ad.cta, value: ctaValue }
+  };
+  if (ad.displayUrl)    linkData.caption     = ad.displayUrl;
+  if (ad.urlParams)     linkData.url_tags    = ad.urlParams;
+  if (ad.imageHash)     linkData.image_hash  = ad.imageHash;
+  else if (ad.imageUrl) linkData.picture     = ad.imageUrl;
+  if (ad.destType === 'WEB_APP') linkData.applink_treatment = ad.applinkTreatment || 'deeplink_with_web_fallback';
+
+  var objectStorySpec;
+  if (ad.format === 'SINGLE_VIDEO') {
+    var videoData = {
+      video_id: ad.videoId,
+      message:  ad.body,
+      title:    ad.headline,
+      call_to_action: { type: ad.cta, value: ctaValue }
+    };
+    if (ad.videoThumb) videoData.image_hash  = ad.videoThumb;
+    if (ad.urlParams)  videoData.url_tags    = ad.urlParams;
+    if (ad.destType === 'WEB_APP') videoData.applink_treatment = ad.applinkTreatment || 'deeplink_with_web_fallback';
+    objectStorySpec = { page_id: pageId, video_data: videoData };
+  } else {
+    objectStorySpec = { page_id: pageId, link_data: linkData };
+  }
+  if (igActor) objectStorySpec.instagram_actor_id = igActor;
+
+  var creativeBody = {
+    name: adName + ' - Creative',
+    object_story_spec: objectStorySpec
+  };
+
+  return metaPost('/' + ACCOUNT_ID + '/adcreatives', creativeBody)
+    .then(function(creative) {
+      setLog(ad.id, 'running', adName + ' — creating ad...');
+      var adBody = {
+        name:      adName,
+        adset_id:  adsetId,
+        creative:  { creative_id: creative.id },
+        status:    ad.status
+      };
+      if (pixelId) adBody.tracking_specs = [{ 'action.type': ['offsite_conversion'], 'fb_pixel': [pixelId] }];
+      return metaPost('/' + ACCOUNT_ID + '/ads', adBody).then(function(adResult) {
+        setLog(ad.id, 'done', adName + ' — ✓ Ad ID: ' + adResult.id);
+        results.push({ name: adName, adId: adResult.id, creativeId: creative.id });
+      });
+    })
+    .catch(function(err) {
+      setLog(ad.id, 'error', adName + ' — ' + err.message);
+      errors.push({ name: adName, error: err.message });
+    });
+}
+
+function showResults(results, errors) {
+  var summ    = document.getElementById('resultsSummary');
+  var summTxt = document.getElementById('resultsSummaryText');
+  var idsEl   = document.getElementById('resultsIds');
+  summ.style.display = 'block';
+
+  if (errors.length === 0) {
+    summTxt.textContent = '🎉 All ' + results.length + ' ad' + (results.length !== 1 ? 's' : '') + ' launched successfully!';
+    summTxt.style.color = 'var(--green)';
+  } else if (results.length === 0) {
+    summTxt.textContent = '❌ All ads failed to launch. Check errors above.';
+    summTxt.style.color = 'var(--red)';
+  } else {
+    summTxt.textContent = '⚠ ' + results.length + ' launched, ' + errors.length + ' failed. See log above.';
+    summTxt.style.color = '#92400E';
+  }
+
+  idsEl.innerHTML = results.map(function(r) {
+    return '<div class="result-id-row">' +
+      '<span class="result-id-label">' + r.name + '</span>' +
+      '<span class="result-id-val">Ad: ' + r.adId + ' &nbsp;·&nbsp; Creative: ' + r.creativeId + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function resetAll() {
+  if (!confirm('Reset everything? All ads will be cleared.')) return;
+  ads = [];
+  adCounter = 0;
+  ['campaignId','campName','adsetId','adsetName','pageId','igActorId','pixelId','accessToken','accountId'].forEach(function(id){
+    var e = document.getElementById(id); if(e) e.value = '';
+  });
+  var panel = document.getElementById('resultsPanel');
+  if (panel) panel.style.display = 'none';
+  var log = document.getElementById('resultsLog');
+  if (log) log.innerHTML = '';
+  addAd();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+addAd();
+</script>
+</body>
+</html>
